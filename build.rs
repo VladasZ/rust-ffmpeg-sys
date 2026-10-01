@@ -1062,37 +1062,39 @@ fn maybe_search_include(include_paths: &[PathBuf], header: &str) -> Option<Strin
     }
 }
 
-/// The prebuilt static libraries `FFMPEG_DIR/prebuilt.txt` names for the
-/// target, one `<target> <url> <sha256>` per line, downloaded once into
-/// `FFMPEG_DIR/lib` and checked against the sha256. A directory without the
-/// list is used as it is. The fetch lives here and not in a consumer's build
-/// script because cargo orders nothing between a consumer's build script and
-/// this crate, which needs the archives the moment it compiles.
-fn fetch_prebuilt(ffmpeg_dir: &Path) {
-    let list = ffmpeg_dir.join("prebuilt.txt");
-    let Ok(text) = fs::read_to_string(&list) else {
-        return;
-    };
-    println!("cargo:rerun-if-changed={}", list.display());
-
-    let target = env::var("TARGET").expect("TARGET is set for build scripts");
-    let Some((url, sha)) = prebuilt_for(&text, &target) else {
-        println!(
-            "cargo:warning=no prebuilt ffmpeg for {target} in {}",
-            list.display()
-        );
-        return;
-    };
-
-    let marker = ffmpeg_dir.join("lib").join("prebuilt.sha256");
-    if fs::read_to_string(&marker).is_ok_and(|have| have.trim() == sha) {
-        return;
+/// Where the ffmpeg headers and libraries are. `FFMPEG_DIR` when it is set,
+/// used as it is. Else, for a static link, the prebuilt archive that
+/// `prebuilt.txt` next to this script names for the target, one
+/// `<target> <url> <sha256>` per line, downloaded once into `OUT_DIR` and
+/// checked against the sha256. So a consumer needs no setup and no checkout
+/// of anything. The fetch lives here because cargo orders nothing between a
+/// consumer's build script and this crate, which needs the archive the moment
+/// it compiles.
+fn ffmpeg_dir(statik: bool) -> Option<PathBuf> {
+    if let Ok(dir) = env::var("FFMPEG_DIR") {
+        return Some(PathBuf::from(dir));
+    }
+    if !statik {
+        return None;
     }
 
-    if let Err(err) = download(&url, &sha, ffmpeg_dir) {
+    let list = Path::new(env!("CARGO_MANIFEST_DIR")).join("prebuilt.txt");
+    println!("cargo:rerun-if-changed={}", list.display());
+    let text = fs::read_to_string(&list).ok()?;
+    let target = env::var("TARGET").expect("TARGET is set for build scripts");
+    let (url, sha) = prebuilt_for(&text, &target)?;
+
+    let root = output().join("ffmpeg-prebuilt");
+    let marker = root.join("prebuilt.sha256");
+    if fs::read_to_string(&marker).is_ok_and(|have| have.trim() == sha) {
+        return Some(root);
+    }
+
+    if let Err(err) = download(&url, &sha, &root) {
         panic!("downloading the prebuilt ffmpeg failed: {err}");
     }
     fs::write(&marker, &sha).expect("the ffmpeg marker is writable");
+    Some(root)
 }
 
 fn prebuilt_for(list: &str, target: &str) -> Option<(String, String)> {
@@ -1124,16 +1126,15 @@ fn download(url: &str, sha: &str, root: &Path) -> Result<(), String> {
         return Err(format!("{url} has sha256 {got}, prebuilt.txt says {sha}"));
     }
 
-    let lib = root.join("lib");
-    if lib.exists() {
-        fs::remove_dir_all(&lib).map_err(|err| format!("clearing {}: {err}", lib.display()))?;
+    if root.exists() {
+        fs::remove_dir_all(root).map_err(|err| format!("clearing {}: {err}", root.display()))?;
     }
+    fs::create_dir_all(root).map_err(|err| format!("creating {}: {err}", root.display()))?;
     let status = Command::new("tar")
         .arg("-xzf")
         .arg(&out)
         .arg("-C")
         .arg(root)
-        .arg("lib")
         .status()
         .map_err(|err| format!("tar did not start: {err}"))?;
     if !status.success() {
@@ -1238,9 +1239,7 @@ fn main() {
         vec![search().join("include")]
     }
     // Use prebuilt library
-    else if let Ok(ffmpeg_dir) = env::var("FFMPEG_DIR") {
-        let ffmpeg_dir = PathBuf::from(ffmpeg_dir);
-        fetch_prebuilt(&ffmpeg_dir);
+    else if let Some(ffmpeg_dir) = ffmpeg_dir(statik) {
         if ffmpeg_dir.join("lib/amd64").exists()
             && env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("x86_64")
         {
@@ -1375,12 +1374,7 @@ fn main() {
 
         // Frameworks only available on macOS
         if target_os == "macos" {
-            let macos_frameworks = vec![
-                "AppKit",
-                "OpenCL",
-                "OpenGL",
-                "VideoDecodeAcceleration",
-            ];
+            let macos_frameworks = vec!["AppKit", "OpenCL", "OpenGL", "VideoDecodeAcceleration"];
             for f in &macos_frameworks {
                 println!("cargo:rustc-link-lib=framework={f}");
             }

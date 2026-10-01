@@ -1,0 +1,7 @@
+# The static ffmpeg archives a static link uses when FFMPEG_DIR is not set,
+# one per target, built by build/ffmpeg.rs of hilen and published as release
+# assets of github.com/hilen/build. build.rs downloads the one for the
+# target into OUT_DIR and checks the sha256.
+#
+# <target> <url> <sha256>
+aarch64-apple-darwin https://github.com/hilen/build/releases/download/ffmpeg-9.0-2/ffmpeg-9.0-aarch64-apple-darwin.tar.gz ac6f9b25dc81348ca38f13f6d5812e5d21cb65a065e9ad3c27cbf76d6941829a
