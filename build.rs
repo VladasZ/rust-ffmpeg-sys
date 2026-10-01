@@ -1097,6 +1097,21 @@ fn ffmpeg_dir(statik: bool) -> Option<PathBuf> {
     Some(root)
 }
 
+/// What a prebuilt archive needs linked besides the ffmpeg libraries, like a
+/// codec library it was built with. `lib/link.txt` names them, one
+/// `<kind>=<name>` per line as `rustc-link-lib` takes it. An archive with no
+/// such file needs nothing more.
+fn link_listed(ffmpeg_dir: &Path) {
+    let list = ffmpeg_dir.join("lib").join("link.txt");
+    let Ok(text) = fs::read_to_string(&list) else {
+        return;
+    };
+    println!("cargo:rerun-if-changed={}", list.display());
+    for line in text.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        println!("cargo:rustc-link-lib={line}");
+    }
+}
+
 fn prebuilt_for(list: &str, target: &str) -> Option<(String, String)> {
     list.lines()
         .filter(|line| !line.starts_with('#'))
@@ -1268,6 +1283,7 @@ fn main() {
             );
         }
         link_to_libraries(statik, &target_os);
+        link_listed(&ffmpeg_dir);
         vec![ffmpeg_dir.join("include")]
     } else if let Some(paths) = try_vcpkg(statik) {
         // vcpkg doesn't detect the "system" dependencies

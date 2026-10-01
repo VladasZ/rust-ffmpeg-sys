@@ -4,4 +4,4 @@
 # target into OUT_DIR and checks the sha256.
 #
 # <target> <url> <sha256>
-aarch64-apple-darwin https://github.com/hilen/build/releases/download/ffmpeg-9.0-2/ffmpeg-9.0-aarch64-apple-darwin.tar.gz ac6f9b25dc81348ca38f13f6d5812e5d21cb65a065e9ad3c27cbf76d6941829a
+aarch64-apple-darwin https://github.com/hilen/build/releases/download/ffmpeg-9.0-3/ffmpeg-9.0-aarch64-apple-darwin.tar.gz 01c397c9eacaab9c1cf6c6d311a393edbf4a968b965361baa0d3447b9cbe0ff8
