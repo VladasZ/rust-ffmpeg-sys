@@ -8,3 +8,4 @@ aarch64-apple-darwin https://github.com/hilen/build/releases/download/ffmpeg-9.0
 x86_64-pc-windows-msvc https://github.com/hilen/build/releases/download/ffmpeg-9.0-4/ffmpeg-9.0-x86_64-pc-windows-msvc.tar.gz 18dae5d801f19d4c341a82f47999d741386d24c57e7682eee9d855f54c0e3ae2
 aarch64-apple-ios https://github.com/hilen/build/releases/download/ffmpeg-9.0-5/ffmpeg-9.0-aarch64-apple-ios.tar.gz a92e4f09c0b773d3baaa7641fd5083806c91a3ce01383c7451f5171e326c6ba4
 x86_64-apple-ios https://github.com/hilen/build/releases/download/ffmpeg-9.0-5/ffmpeg-9.0-x86_64-apple-ios.tar.gz 2b968e6b0d94e1aa623f8f7091c96e457f2633b5946b86991154d5f25548f131
+aarch64-apple-ios-sim https://github.com/hilen/build/releases/download/ffmpeg-9.0-6/ffmpeg-9.0-aarch64-apple-ios-sim.tar.gz 0bbd060c548068367b4641460c77465a2261b004311ca166fb838d7b3e197a0c
